@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title or "Adrobot" }}</title>
+    <link rel="stylesheet" href="{{ request.url_for('static', path='app.css') }}">
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Adrobot</p>
+          <h1>{{ title or "Adrobot" }}</h1>
+        </div>
+        <nav class="nav">
+          <a href="/">Admin</a>
+          <a href="/campaigns">Campaigns</a>
+          <a href="/campaigns/new">New campaign</a>
+          <a href="/dictionaries">Dictionaries</a>
+        </nav>
+      </header>
+
+      {% if error %}
+        <section class="alert">
+          <strong>Error {{ error.status_code }}</strong>
+          <p>{{ error.message }}</p>
+        </section>
+      {% endif %}
+
+      <main class="content">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

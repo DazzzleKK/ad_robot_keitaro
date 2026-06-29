@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Create campaign</h2>
+        <p>Build a Keitaro campaign with one geo redirect stream and one offers stream.</p>
+      </div>
+      <a class="button-link" href="/dictionaries">Review dictionaries</a>
+    </div>
+
+    <form method="post" action="/campaigns" class="form">
+      <div class="form-grid">
+        <label>
+          <span>Name</span>
+          <input type="text" name="name" value="{{ form.name }}">
+        </label>
+        <label>
+          <span>Country code</span>
+          <input type="text" name="country_code" value="{{ form.country_code }}" maxlength="2">
+        </label>
+        <label>
+          <span>Geo redirect URL</span>
+          <input type="url" name="geo_redirect_url" value="{{ form.geo_redirect_url or 'https://www.google.com/' }}">
+        </label>
+        <label>
+          <span>Domain</span>
+          <select name="domain_id">
+            <option value="">Select domain</option>
+            {% for item in dictionaries.domains %}
+              <option value="{{ item.keitaro_id }}" {% if form.domain_id == item.keitaro_id|string %}selected{% endif %}>
+                {{ item.name }} ({{ item.keitaro_id }})
+              </option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>Group</span>
+          <select name="group_id">
+            <option value="">Select group</option>
+            {% for item in dictionaries.groups %}
+              <option value="{{ item.keitaro_id }}" {% if form.group_id == item.keitaro_id|string %}selected{% endif %}>
+                {{ item.name }} ({{ item.keitaro_id }})
+              </option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>Source</span>
+          <select name="source_id">
+            <option value="">Select source</option>
+            {% for item in dictionaries.sources %}
+              <option value="{{ item.keitaro_id }}" {% if form.source_id == item.keitaro_id|string %}selected{% endif %}>
+                {{ item.name }} ({{ item.keitaro_id }})
+              </option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+
+      <div class="panel-subtitle">
+        <h3>Offers</h3>
+        <p>Add one or more offer rows. Empty rows are ignored.</p>
+      </div>
+
+      <div class="offer-rows">
+        {% for row in form.offers %}
+          <div class="offer-row">
+            <label>
+              <span>Offer ID</span>
+              <input type="number" name="offer_id" value="{{ row.offer_id }}">
+            </label>
+            <label>
+              <span>Weight</span>
+              <input type="number" name="offer_weight" value="{{ row.weight }}">
+            </label>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="actions">
+        <button type="submit">Create campaign</button>
+      </div>
+    </form>
+  </section>
+{% endblock %}

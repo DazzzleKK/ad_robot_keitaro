@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Objects</h2>
+      </div>
+    </div>
+
+    <div class="object-list">
+      {% for object in objects %}
+        <a class="object-row" href="{{ object.url }}">
+          <div>
+            <strong>{{ object.name }}</strong>
+            <p>{{ object.description }}</p>
+          </div>
+          <span class="object-link">Open</span>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

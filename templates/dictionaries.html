@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Keitaro dictionaries</h2>
+        <p>Cached values used by the campaign form.</p>
+      </div>
+      <form method="post" action="/dictionaries/refresh">
+        <button type="submit">Refresh from Keitaro</button>
+      </form>
+    </div>
+
+    <div class="grid">
+      {% for dictionary_type, items in dictionaries.items() %}
+        <article class="card">
+          <h3>{{ dictionary_type.value|replace("_", " ")|title }}</h3>
+          {% if items %}
+            <ul class="list">
+              {% for item in items %}
+                <li>
+                  <span class="badge">{{ item.keitaro_id }}</span>
+                  {{ item.name }}
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="muted">No cached items yet.</p>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

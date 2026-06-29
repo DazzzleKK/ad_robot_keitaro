@@ -1,0 +1,2 @@
+"""Adrobot application package."""
+

@@ -1,0 +1,97 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adrobot"
+version = "0.1.0"
+description = "Adrobot FastAPI application"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "sqlalchemy>=2.0",
+  "alembic>=1.13",
+  "pydantic-settings>=2.2",
+  "jinja2>=3.1",
+  "httpx>=0.27",
+  "psycopg[binary]>=3.2",
+  "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "ruff>=0.5",
+  "import-linter>=2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 88
+
+[tool.importlinter]
+root_package = "src"
+
+[[tool.importlinter.contracts]]
+name = "Repositories do not depend on orchestration or external integrations"
+type = "forbidden"
+source_modules = [
+  "src.campaigns.repositories",
+  "src.dictionaries.repositories",
+]
+forbidden_modules = [
+  "src.campaigns.usecases",
+  "src.dictionaries.usecases",
+  "src.keitaro",
+]
+
+[[tool.importlinter.contracts]]
+name = "Repositories do not depend on each other"
+type = "forbidden"
+source_modules = ["src.campaigns.repositories"]
+forbidden_modules = ["src.dictionaries.repositories"]
+
+[[tool.importlinter.contracts]]
+name = "Dictionary repositories do not depend on campaign repositories"
+type = "forbidden"
+source_modules = ["src.dictionaries.repositories"]
+forbidden_modules = ["src.campaigns.repositories"]
+
+[[tool.importlinter.contracts]]
+name = "Services do not depend on usecases"
+type = "forbidden"
+source_modules = [
+  "src.campaigns.services",
+]
+forbidden_modules = [
+  "src.campaigns.usecases",
+  "src.dictionaries.usecases",
+]
+
+[[tool.importlinter.contracts]]
+name = "API presentation modules do not depend on data or integration layers directly"
+type = "forbidden"
+source_modules = [
+  "src.api.admin_pages",
+  "src.api.campaign_pages",
+  "src.api.campaign_presenters",
+  "src.api.dictionary_pages",
+  "src.api.forms",
+  "src.api.page_utils",
+]
+forbidden_modules = [
+  "src.campaigns.models",
+  "src.campaigns.repositories",
+  "src.campaigns.usecases",
+  "src.database",
+  "src.dictionaries.models",
+  "src.dictionaries.repositories",
+  "src.dictionaries.usecases",
+  "src.keitaro",
+]
+allow_indirect_imports = true

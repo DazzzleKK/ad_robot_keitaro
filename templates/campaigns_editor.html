@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>{% if campaign %}{{ campaign.name }}{% else %}Campaign {{ request.path_params.campaign_id }}{% endif %}</h2>
+        {% if campaign %}
+          <p>Keitaro campaign ID {{ campaign.keitaro_campaign_id }}</p>
+        {% endif %}
+      </div>
+      {% if campaign %}
+        <form method="post" action="/campaigns/{{ campaign.id }}/fetch-streams">
+          <button type="submit">Fetch streams from KT</button>
+        </form>
+      {% endif %}
+    </div>
+
+    {% if campaign %}
+      <div class="meta-grid">
+        <div class="meta-card"><span>Domain</span><strong>{{ campaign.domain_id }}</strong></div>
+        <div class="meta-card"><span>Group</span><strong>{{ campaign.group_id }}</strong></div>
+        <div class="meta-card"><span>Source</span><strong>{{ campaign.source_id }}</strong></div>
+      </div>
+
+      <div class="streams">
+        {% for stream in campaign.streams %}
+          <article class="card stream-card">
+            <div class="panel-header compact">
+              <div>
+                <h3>{{ stream.name }}</h3>
+                <p>{{ stream.kind.value|replace("_", " ")|title }} stream</p>
+              </div>
+            </div>
+
+            {% if stream.kind.value == "offers" %}
+              <form method="post" action="/campaigns/{{ campaign.id }}/streams/{{ stream.id }}/offers/batch" class="batch-form">
+                {% if stream.offers %}
+                  <ul class="offers">
+                    {% for offer in stream.offers %}
+                      {% if offer.active %}
+                        <li class="offer-item active" data-offer-item data-offer-id="{{ offer.keitaro_offer_id }}" data-active="true">
+                          <div>
+                            <strong>Offer {{ offer.keitaro_offer_id }}</strong>
+                            <p>Weight <span data-offer-weight>{{ offer.weight }}</span></p>
+                          </div>
+                          <div class="offer-actions">
+                            <label class="pin-control">
+                              <input type="checkbox" name="pinned_offer_id" value="{{ offer.keitaro_offer_id }}" {% if offer.pinned_weight is not none %}checked{% endif %}>
+                              <span>Pin</span>
+                              <input type="number" name="pinned_weight_{{ offer.keitaro_offer_id }}" min="0" max="100" value="{{ offer.pinned_weight if offer.pinned_weight is not none else offer.weight }}">
+                            </label>
+                            <span class="badge success">Active</span>
+                            <label class="checkbox-label">
+                              <input type="checkbox" name="remove_offer_id" value="{{ offer.keitaro_offer_id }}">
+                              <span>Remove</span>
+                            </label>
+                          </div>
+                        </li>
+                      {% endif %}
+                    {% endfor %}
+                    {% for offer in stream.offers %}
+                      {% if not offer.active %}
+                        <li class="offer-item inactive" data-offer-item data-offer-id="{{ offer.keitaro_offer_id }}" data-active="false">
+                          <div>
+                            <strong>Offer {{ offer.keitaro_offer_id }}</strong>
+                            <p>Weight <span data-offer-weight>{{ offer.weight }}</span></p>
+                          </div>
+                          <div class="offer-actions">
+                            <label class="pin-control">
+                              <input type="checkbox" name="pinned_offer_id" value="{{ offer.keitaro_offer_id }}" {% if offer.pinned_weight is not none %}checked{% endif %}>
+                              <span>Pin</span>
+                              <input type="number" name="pinned_weight_{{ offer.keitaro_offer_id }}" min="0" max="100" value="{{ offer.pinned_weight if offer.pinned_weight is not none else offer.weight }}">
+                            </label>
+                            <span class="badge muted">Inactive</span>
+                            <label class="checkbox-label">
+                              <input type="checkbox" name="enable_offer_id" value="{{ offer.keitaro_offer_id }}">
+                              <span>Enable</span>
+                            </label>
+                          </div>
+                        </li>
+                      {% endif %}
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="muted" data-empty-offers>No offers in this stream.</p>
+                {% endif %}
+
+                <div class="inline-form">
+                  <label class="offer-search">
+                    <span>Search offers</span>
+                    <input type="search" data-offer-search-input placeholder="Type offer ID or name">
+                    <input type="hidden" name="add_offer_ids" data-offer-search-values>
+                    <div class="offer-search-dropdown" data-offer-search-dropdown hidden></div>
+                  </label>
+                  <button type="button" class="secondary" data-reset-batch>Cancel changes</button>
+                  <button type="submit">Apply batch</button>
+                </div>
+                <p class="selected-offers" data-offer-search-selected></p>
+              </form>
+            {% elif stream.offers %}
+              <ul class="offers">
+                {% for offer in stream.offers %}
+                  {% if offer.active %}
+                    <li class="offer-item active">
+                      <div>
+                        <strong>Offer {{ offer.keitaro_offer_id }}</strong>
+                        <p>Weight {{ offer.weight }}</p>
+                      </div>
+                      <div class="offer-actions">
+                        <span class="badge success">Active</span>
+                      </div>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+                {% for offer in stream.offers %}
+                  {% if not offer.active %}
+                    <li class="offer-item inactive">
+                      <div>
+                        <strong>Offer {{ offer.keitaro_offer_id }}</strong>
+                        <p>Weight {{ offer.weight }}</p>
+                      </div>
+                      <div class="offer-actions">
+                        <span class="badge muted">Inactive</span>
+                      </div>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="muted">No offers in this stream.</p>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="muted">Campaign not loaded.</p>
+    {% endif %}
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (function () {
+      function debounce(callback, delay) {
+        var timerId;
+        return function () {
+          var args = arguments;
+          clearTimeout(timerId);
+          timerId = setTimeout(function () {
+            callback.apply(null, args);
+          }, delay);
+        };
+      }
+
+      function setDropdown(dropdown, offers, onSelect) {
+        dropdown.innerHTML = "";
+        dropdown.hidden = false;
+
+        if (!offers.length) {
+          var emptyItem = document.createElement("div");
+          emptyItem.className = "offer-search-empty";
+          emptyItem.textContent = "No offers found";
+          dropdown.appendChild(emptyItem);
+          return;
+        }
+
+        offers.forEach(function (offer) {
+          var button = document.createElement("button");
+          button.type = "button";
+          button.className = "offer-search-option";
+          button.textContent = offer.label;
+          button.addEventListener("click", function () {
+            onSelect(String(offer.id), offer.label);
+          });
+          dropdown.appendChild(button);
+        });
+      }
+
+      document.querySelectorAll(".batch-form").forEach(function (form) {
+        var input = form.querySelector("[data-offer-search-input]");
+        var dropdown = form.querySelector("[data-offer-search-dropdown]");
+        var valuesInput = form.querySelector("[data-offer-search-values]");
+        var selectedText = form.querySelector("[data-offer-search-selected]");
+        var offersList = form.querySelector(".offers");
+        var selectedIds = [];
+
+        function syncSelected() {
+          valuesInput.value = selectedIds.join(",");
+          selectedText.textContent = selectedIds.length ? "Selected: " + selectedIds.join(", ") : "";
+        }
+
+        function equalWeights(total, count) {
+          var baseWeight = Math.floor(total / count);
+          var remainder = total % count;
+          var weights = [];
+          for (var index = 0; index < count; index += 1) {
+            weights.push(baseWeight + (index < remainder ? 1 : 0));
+          }
+          return weights;
+        }
+
+        function activeOfferItems() {
+          return Array.prototype.filter.call(form.querySelectorAll("[data-offer-item]"), function (item) {
+            var offerId = item.getAttribute("data-offer-id");
+            var removeInput = form.querySelector('input[name="remove_offer_id"][value="' + offerId + '"]');
+            var enableInput = form.querySelector('input[name="enable_offer_id"][value="' + offerId + '"]');
+            var isActive = item.getAttribute("data-active") === "true";
+            var isRemoved = removeInput && removeInput.checked;
+            var isEnabled = enableInput && enableInput.checked;
+            return !isRemoved && (isActive || isEnabled || item.getAttribute("data-pending") === "true");
+          });
+        }
+
+        function recalculateVisualWeights() {
+          var items = activeOfferItems();
+          var unpinnedItems = [];
+          var pinnedTotal = 0;
+
+          items.forEach(function (item) {
+            var offerId = item.getAttribute("data-offer-id");
+            var pinInput = form.querySelector('input[name="pinned_offer_id"][value="' + offerId + '"]');
+            var pinnedInput = form.querySelector('input[name="pinned_weight_' + offerId + '"]');
+            if (pinInput && pinInput.checked && pinnedInput && pinnedInput.value) {
+              pinnedTotal += Number(pinnedInput.value);
+              item.querySelector("[data-offer-weight]").textContent = pinnedInput.value;
+            } else {
+              unpinnedItems.push(item);
+            }
+          });
+
+          if (!unpinnedItems.length) {
+            return;
+          }
+
+          var remainingWeight = Math.max(0, 100 - pinnedTotal);
+          var weights = equalWeights(remainingWeight, unpinnedItems.length);
+          unpinnedItems.forEach(function (item, index) {
+            item.querySelector("[data-offer-weight]").textContent = weights[index];
+          });
+        }
+
+        function clearPinnedWeight(offerId) {
+          var pinInput = form.querySelector('input[name="pinned_offer_id"][value="' + offerId + '"]');
+          if (pinInput) {
+            pinInput.checked = false;
+          }
+        }
+
+        function ensureOffersList() {
+          if (offersList) {
+            return offersList;
+          }
+          var emptyMessage = form.querySelector("[data-empty-offers]");
+          if (emptyMessage) {
+            emptyMessage.remove();
+          }
+          offersList = document.createElement("ul");
+          offersList.className = "offers";
+          form.insertBefore(offersList, form.querySelector(".inline-form"));
+          return offersList;
+        }
+
+        function addPendingOffer(offerId, label) {
+          var item = document.createElement("li");
+          item.className = "offer-item active pending";
+          item.setAttribute("data-offer-item", "");
+          item.setAttribute("data-offer-id", offerId);
+          item.setAttribute("data-active", "true");
+          item.setAttribute("data-pending", "true");
+
+          var content = document.createElement("div");
+          var title = document.createElement("strong");
+          var weight = document.createElement("p");
+          var weightValue = document.createElement("span");
+          var actions = document.createElement("div");
+          var badge = document.createElement("span");
+
+          title.textContent = label;
+          weight.append("Weight ");
+          weightValue.setAttribute("data-offer-weight", "");
+          weightValue.textContent = "0";
+          weight.appendChild(weightValue);
+          content.appendChild(title);
+          content.appendChild(weight);
+
+          actions.className = "offer-actions";
+          badge.className = "badge success";
+          badge.textContent = "Pending";
+          actions.appendChild(badge);
+
+          item.appendChild(content);
+          item.appendChild(actions);
+          var list = ensureOffersList();
+          var firstInactiveItem = list.querySelector("[data-offer-item].inactive");
+          if (firstInactiveItem) {
+            list.insertBefore(item, firstInactiveItem);
+          } else {
+            list.appendChild(item);
+          }
+        }
+
+        function selectOffer(offerId, label) {
+          var existingItem = form.querySelector('[data-offer-item][data-offer-id="' + offerId + '"]');
+          if (existingItem) {
+            var enableInput = form.querySelector('input[name="enable_offer_id"][value="' + offerId + '"]');
+            if (enableInput) {
+              enableInput.checked = true;
+              recalculateVisualWeights();
+            }
+            return;
+          }
+
+          if (selectedIds.indexOf(offerId) === -1) {
+            selectedIds.push(offerId);
+            syncSelected();
+            addPendingOffer(offerId, label);
+            recalculateVisualWeights();
+          }
+        }
+
+        var search = debounce(function () {
+          var query = input.value.trim();
+          if (!query) {
+            dropdown.hidden = true;
+            dropdown.innerHTML = "";
+            return;
+          }
+
+          dropdown.hidden = false;
+          dropdown.innerHTML = '<div class="offer-search-empty">Searching...</div>';
+          fetch("/keitaro/offers/search?q=" + encodeURIComponent(query))
+            .then(function (response) {
+              if (!response.ok) {
+                throw new Error("Search failed");
+              }
+              return response.json();
+            })
+            .then(function (offers) {
+              setDropdown(dropdown, offers, function (offerId, label) {
+                selectOffer(offerId, label);
+                input.value = label;
+                dropdown.hidden = true;
+              });
+            })
+            .catch(function () {
+              dropdown.hidden = false;
+              dropdown.innerHTML = '<div class="offer-search-empty">Search failed</div>';
+            });
+        }, 300);
+
+        input.addEventListener("input", search);
+        form.querySelector("[data-reset-batch]").addEventListener("click", function () {
+          window.location.reload();
+        });
+        form.addEventListener("change", function (event) {
+          if (event.target.matches('input[name="remove_offer_id"]') && event.target.checked) {
+            clearPinnedWeight(event.target.value);
+          }
+          if (
+            event.target.matches('input[name="remove_offer_id"]') ||
+            event.target.matches('input[name="enable_offer_id"]') ||
+            event.target.matches('input[name="pinned_offer_id"]') ||
+            (event.target.name || "").indexOf("pinned_weight_") === 0
+          ) {
+            recalculateVisualWeights();
+          }
+        });
+        form.addEventListener("input", function (event) {
+          if ((event.target.name || "").indexOf("pinned_weight_") === 0) {
+            recalculateVisualWeights();
+          }
+        });
+        input.addEventListener("focus", function () {
+          if (dropdown.innerHTML) {
+            dropdown.hidden = false;
+          }
+        });
+        document.addEventListener("click", function (event) {
+          if (!form.contains(event.target)) {
+            dropdown.hidden = true;
+          }
+        });
+      });
+    })();
+  </script>
+{% endblock %}

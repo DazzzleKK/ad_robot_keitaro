@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Campaigns</h2>
+      </div>
+      <a class="button-link" href="/campaigns/new">Create</a>
+    </div>
+
+    {% if campaigns %}
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Keitaro ID</th>
+              <th>Domain</th>
+              <th>Group</th>
+              <th>Source</th>
+              <th>Streams</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for campaign in campaigns %}
+              <tr>
+                <td>{{ campaign.id }}</td>
+                <td><a href="/campaigns/{{ campaign.id }}">{{ campaign.name }}</a></td>
+                <td>{{ campaign.keitaro_campaign_id }}</td>
+                <td>{{ campaign.domain_id }}</td>
+                <td>{{ campaign.group_id }}</td>
+                <td>{{ campaign.source_id }}</td>
+                <td>{{ campaign.streams|length }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted">No campaigns in the database.</p>
+    {% endif %}
+  </section>
+{% endblock %}
